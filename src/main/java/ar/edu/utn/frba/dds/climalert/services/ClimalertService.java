@@ -3,6 +3,9 @@ package ar.edu.utn.frba.dds.climalert.services;
 import ar.edu.utn.frba.dds.climalert.dtos.WeatherResponseDTO;
 import ar.edu.utn.frba.dds.climalert.models.entities.RegistroClimatico;
 import ar.edu.utn.frba.dds.climalert.repositories.RegistroClimaticoRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -11,10 +14,14 @@ import java.util.Optional;
 public class ClimalertService {
   private final WeatherService weatherApi;
   private final RegistroClimaticoRepository registroClimaticoRepository;
+  private final JavaMailSender mailSender;
 
-  public ClimalertService(WeatherService weatherApi, RegistroClimaticoRepository registroClimaticoRepository) {
+  @Value("${MAIL_USER}")
+  private String correoDestinatario;
+  public ClimalertService(WeatherService weatherApi, RegistroClimaticoRepository registroClimaticoRepository, JavaMailSender mailSender) {
     this.weatherApi = weatherApi;
     this.registroClimaticoRepository = registroClimaticoRepository;
+    this.mailSender = mailSender;
   }
 
   public void registrarClima(){
@@ -38,13 +45,22 @@ public class ClimalertService {
       enviarAlerta(ultimoRegistro.getTemp_c(),ultimoRegistro.getHumidity());
     }else {
       System.out.println(
-          "Condiciones normales. Temp: " + ultimoRegistro.getTemp_c() + "Humedad: " + ultimoRegistro.getHumidity());
+          "Condiciones normales. Temp: " + ultimoRegistro.getTemp_c() + " Humedad: " + ultimoRegistro.getHumidity());
     }
   }
 
   public void enviarAlerta(float temp_c, int humidity){
+
+    SimpleMailMessage mensaje = new SimpleMailMessage();
+
+    mensaje.setTo(correoDestinatario);
+    mensaje.setSubject("¡Alerta meteorologica detectada!");
+    mensaje.setText("Detalle: Temperatura de " + temp_c + "°C y humedad del " + humidity + "%");
+
+    mailSender.send(mensaje);
+
     System.out.println("Alerta meteorologica enviada.");
-    System.out.println("Destinatarios: admin@clima.com, emergencias@clima.com, meteorologia@clima.com");
-    System.out.println("Detalle: Temperatura de " + temp_c + "°C y humedad del " + humidity + "%");
+    /* System.out.println("Destinatarios: admin@clima.com, emergencias@clima.com, meteorologia@clima.com");
+    System.out.println("Detalle: Temperatura de " + temp_c + "°C y humedad del " + humidity + "%"); */
   }
 }
